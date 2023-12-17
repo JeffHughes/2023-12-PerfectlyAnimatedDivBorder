@@ -3,8 +3,12 @@ import { CommonModule } from '@angular/common';
 import { RouterOutlet } from '@angular/router';
 
 import { gsap } from 'gsap';
+import { Observer } from 'gsap/Observer';
 import { MotionPathPlugin } from 'gsap/MotionPathPlugin';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 gsap.registerPlugin(MotionPathPlugin)
+gsap.registerPlugin(Observer);
+gsap.registerPlugin(ScrollTrigger)
 
 @Component({
   selector: 'app-root',
@@ -28,48 +32,74 @@ export class AppComponent implements AfterViewInit {
 
   divExists = false;
   dots: any[] = [];
-  resetAnimatedBorder() { 
+  animations: any[] = [];
+  resetAnimatedBorder() {
     let abc = this.animatedBorderContainer.nativeElement;
-    
+
     let newWidth = abc.offsetWidth - 1;
     let newHeight = abc.offsetHeight - 1;
     let d = `M0 0 L ${newWidth} 0 L ${newWidth} ${newHeight} L 0 ${newHeight} Z`
-    let roundedPath = this.roundPathCorners(d, 10, false);
+    let roundedPath = this.roundPathCorners(d, 20, false);
     let ab = this.animatedBorder.nativeElement;
     ab.setAttribute('d', roundedPath);
 
     // remove all existing dots from dom 
     this.dots.forEach(dot => { dot.remove(); });
+    this.animations = [];
 
     const numOfDots: number = 40;  // starts bogging down around 100+ dots
 
     // Create the dots and append them to the body or specific container
-    for (let i = 0; i < numOfDots; i++) { 
+    for (let i = 0; i < numOfDots; i++) {
       let dot = document.createElement('div');
-      dot.classList.add('dot'); 
-      dot.innerHTML = '.'; 
+      dot.classList.add('dot');
+      dot.innerHTML = '.';
       let maxOpacity = 0.3;
-      let fade = maxOpacity - (maxOpacity * (i / numOfDots)); 
+      let fade = maxOpacity - (maxOpacity * (i / numOfDots));
       dot.style.backgroundColor = 'rgba(255, 255, 255, ' + fade + ')';
       abc.appendChild(dot);
- 
-      gsap.to(dot, {
+
+      let animation = gsap.to(dot, {
         duration: 10,
-        repeat: -1,  
+        repeat: -1,
         ease: "linear",
         motionPath: {
           path: "#svg-rect",
           align: "#svg-rect",
         },
-        delay: i * 0.015,
+        delay: i * 0.01,
+
+        scrollTrigger: {
+          trigger: abc,
+          start: "top bottom",
+          end: "bottom top",
+
+          onUpdate: (self) => {
+            // console.log( 
+            //   self.isActive ? "active" : "inactive",
+            //   (self.progress * 100).toFixed(2) + "%");
+
+            if (self.isActive) {   // Checks if the trigger element is within the start and end positions
+              animation.play(); 
+            } else {
+              animation.pause(); 
+            }
+          },
+
+          markers: true, // Remove this line to hide the markers
+        }
+
       });
+
+      this.animations.push(animation);
 
       // fade in after the dots gets past the first corner
       // so there isn't a bright spot in the top, left corner
-      // where they all bunch up 
+      // where they all bunch up at the beginning
       gsap.to(dot, { opacity: 1, delay: .1 + i * 0.01, });
 
       this.dots.push(dot);
+ 
     }
 
     this.divExists = true;
